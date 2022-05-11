@@ -24,6 +24,8 @@ import java.util.regex.Matcher;
 import static com.drfeederino.telegramwebchecker.constants.BotMessages.*;
 import static com.drfeederino.telegramwebchecker.constants.Patterns.BARCODE_NUMBER;
 import static com.drfeederino.telegramwebchecker.constants.Patterns.NUMBER;
+import static com.drfeederino.telegramwebchecker.enums.UserStatus.COMPLETE;
+import static com.drfeederino.telegramwebchecker.enums.UserStatus.MIGRATION_COMPLETE_V_1_1_0;
 import static com.drfeederino.telegramwebchecker.services.AESEncryption.decryptData;
 import static com.drfeederino.telegramwebchecker.services.AESEncryption.encryptData;
 
@@ -128,15 +130,34 @@ public class WebCheckerBot extends TelegramLongPollingBot {
         Matcher numberMatcher = NUMBER.matcher(text);
         Matcher barcodeMatcher = BARCODE_NUMBER.matcher(text);
         if (numberMatcher.find()) {
-            number = numberMatcher.group();
+            number = numberMatcher.group() + ";";
         }
         if (barcodeMatcher.find()) {
-            barcode = barcodeMatcher.group();
+            barcode = barcodeMatcher.group() + ";";
+        }
+        if (user.getNumber() != null && user.getBarcode() != null && barcode != null && number != null) {
+            log.info("Adding additional passport & barcode.");
+            String decryptedNumber = decryptData(user.getNumber());
+            if (decryptedNumber.contains(number)) {
+                sendUpdate(user.getId(), DUPLICATED_INFO);
+                return;
+            }
+            decryptedNumber += number;
+            String decryptedBarcode = decryptData(user.getBarcode());
+            decryptedBarcode += barcode;
+            user.setBarcode(encryptData(decryptedBarcode));
+            user.setNumber(encryptData(decryptedNumber));
+            sendUpdate(user.getId(), ADDED_ADDITIONAL_INFO);
+            userRepository.save(user);
+            TelegramUser telegramUser = trackingParser.updateUserStatus(user);
+            userRepository.save(user);
+            sendNewStatus(telegramUser.getId(), telegramUser.getLastStatus());
+            return;
         }
 
         if (barcode != null && number != null) {
             log.info("Completed user registration. Retrieving latest status.");
-            user.setStatus(UserStatus.COMPLETE);
+            user.setStatus(MIGRATION_COMPLETE_V_1_1_0);
             user.setBarcode(encryptData(barcode));
             user.setNumber(encryptData(number));
             sendUpdate(user.getId(), USER_COMPLETED_REGISTRATION);
@@ -155,7 +176,10 @@ public class WebCheckerBot extends TelegramLongPollingBot {
 
     @SneakyThrows
     public void sendUpdate(Long id, String updateMessage) {
-        executeAsync(buildMessage(id, updateMessage));
+        String[] messages = updateMessage.split(";");
+        for (String message : messages) {
+            executeAsync(buildMessage(id, message));
+        }
     }
 
     private SendMessage buildMessage(Long id, String message) {
@@ -169,10 +193,30 @@ public class WebCheckerBot extends TelegramLongPollingBot {
     @Scheduled(fixedRate = 1000 * 60 * 60)
     private void scheduleUpdate() {
         log.info("Scheduled update. Retrieving information for users.");
-        List<TelegramUser> updatedUsers = trackingParser.updateApplicationStatuses(userRepository.findAll());
+        List<TelegramUser> users = userRepository.findAll();
+        migrateUsersFirstTime(users);
+        List<TelegramUser> updatedUsers = trackingParser.updateApplicationStatuses(users);
         userRepository.saveAll(updatedUsers);
         updatedUsers.forEach(user -> sendNewStatus(user.getId(), user.getLastStatus()));
-        log.info("Scheduled update complete. Updated statuses for " + updatedUsers.size() + " out of " + userRepository.findAll().size() + " users.");
+        log.info("Scheduled update complete. Updated statuses for " + updatedUsers.size() + " out of " + users.size() + " users.");
+    }
+
+    private void migrateUsersFirstTime(List<TelegramUser> users) {
+        users.stream()
+                .filter(user -> COMPLETE.equals(user.getStatus())) // all prior users need to be converted to new version
+                .forEach(user -> {
+                    try {
+                        String barcode = decryptData(user.getBarcode()) + ";";
+                        String number = decryptData(user.getNumber()) + ";";
+                        String lastStatus = decryptData(user.getLastStatus()) + ";";
+                        user.setLastStatus(encryptData(lastStatus));
+                        user.setNumber(encryptData(number));
+                        user.setBarcode(encryptData(barcode));
+                        user.setStatus(MIGRATION_COMPLETE_V_1_1_0);
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
     }
 
     @SneakyThrows

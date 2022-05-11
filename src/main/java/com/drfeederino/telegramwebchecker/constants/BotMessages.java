@@ -8,6 +8,7 @@ public final class BotMessages {
             "Message is expected to be like this:\n" +
             "XXXXX XXXXX\n" +
             "where the first number is your passport, and the latter is your barcode number.\n" +
+            "<b>New</b>: can track multiple applications. Just provide another pair of passport number & barcode!\n" +
             "If you reply with the proper format of message, you give your consent to store personal information.\n" +
             "The bot can collect your: name, telegram user id, passport number, barcode number & the last status of application. Everything (except user ID) is stored in the encrypted form.\n" +
             "If you want to delete all your information, simply send /stop command.";
@@ -19,6 +20,8 @@ public final class BotMessages {
     public static final String USER_DELETED = "Your information has been deleted. Goodbye!";
     public static final String USER_CHECKING_STATUS_NOW = "Checking your information. Hold on...";
     public static final String UNKNOWN_STATUS = "Application hasn't been found or the site is having issues right now.";
+    public static final String DUPLICATED_INFO = "Duplicated details of barcode or passport number found. Please, make sure to supply a new pair.";
+    public static final String ADDED_ADDITIONAL_INFO = "Successfully added another barcode and passport number for tracking.";
 
     private BotMessages() {
     }

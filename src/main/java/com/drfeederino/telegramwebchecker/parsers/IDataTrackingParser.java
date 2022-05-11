@@ -27,7 +27,7 @@ public class IDataTrackingParser extends TrackingParser {
 
     private static String capitalizeFirstLetter(String str) {
         if (str == null || str.isEmpty()) {
-            return null;
+            return "Unknown user";
         }
 
         return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
@@ -43,17 +43,20 @@ public class IDataTrackingParser extends TrackingParser {
                     .filter(user -> user.getBarcode() != null && user.getNumber() != null)
                     .forEach(data -> {
                         try {
-                            String number = decryptData(data.getNumber());
-                            String barcode = decryptData(data.getBarcode());
-                            driver.get(String.format(STATUS_CHECK, number, barcode));
-                            String result = wait.until(presenceOfElementLocated(By.tagName("body"))).getText();
-                            driver.get(String.format(TRANSLATE_PAGE, "en", result.split("#")[1]));
-                            String eng = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
-                            driver.get(String.format(TRANSLATE_PAGE, "ru", result.split("#")[1]));
-                            String rus = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
-                            result = parseText(result, eng, rus);
-                            log.info("Successfully parsed result.");
-                            compareStatusesAndUpdate(data, result, updatedUsers);
+                            String[] numbers = decryptData(data.getNumber()).split(";");
+                            String[] barcodes = decryptData(data.getBarcode()).split(";");
+                            StringBuilder result = new StringBuilder("");
+                            for (int i = 0; i < numbers.length; i++) {
+                                driver.get(String.format(STATUS_CHECK, numbers[i], barcodes[i]));
+                                String body = wait.until(presenceOfElementLocated(By.tagName("body"))).getText();
+                                driver.get(String.format(TRANSLATE_PAGE, "en", body.split("#")[1]));
+                                String eng = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
+                                driver.get(String.format(TRANSLATE_PAGE, "ru", body.split("#")[1]));
+                                String rus = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
+                                result.append(parseText(body, eng, rus));
+                                log.info("Successfully parsed body.");
+                            }
+                            compareStatusesAndUpdate(data, result.toString(), updatedUsers);
                         } catch (Exception e) {
                             log.info("Application status not found.");
                             compareStatusesAndUpdate(data, UNKNOWN_STATUS, updatedUsers);
@@ -71,7 +74,10 @@ public class IDataTrackingParser extends TrackingParser {
             return null;
         }
         String[] strings = result.split("#");
-        return String.format(USER_STATUS_MESSAGE, capitalizeFirstLetter(strings[2].trim()), strings[1].trim(), eng, rus);
+        if (strings.length <= 2) {
+            return "Application can't be parsed.;";
+        }
+        return String.format(USER_STATUS_MESSAGE, capitalizeFirstLetter(strings[2].trim()), strings[1].trim(), eng, rus) + ";";
     }
 
     @SneakyThrows
@@ -93,19 +99,21 @@ public class IDataTrackingParser extends TrackingParser {
     public TelegramUser updateUserStatus(TelegramUser user) {
         FirefoxDriver driver = createHeadlessDriver();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10L));
-
         try {
-            String number = decryptData(user.getNumber());
-            String barcode = decryptData(user.getBarcode());
-            driver.get(String.format(STATUS_CHECK, number, barcode));
-            String result = wait.until(presenceOfElementLocated(By.tagName("body"))).getText();
-            driver.get(String.format(TRANSLATE_PAGE, "en", result.split("#")[1]));
-            String eng = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
-            driver.get(String.format(TRANSLATE_PAGE, "ru", result.split("#")[1]));
-            String rus = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
-            result = parseText(result, eng, rus);
-            log.info("Successfully parsed result.");
-            compareStatusesAndUpdate(user, result);
+            String[] numbers = decryptData(user.getNumber()).split(";");
+            String[] barcodes = decryptData(user.getBarcode()).split(";");
+            StringBuilder result = new StringBuilder("");
+            for (int i = 0; i < numbers.length; i++) {
+                driver.get(String.format(STATUS_CHECK, numbers[i], barcodes[i]));
+                String body = wait.until(presenceOfElementLocated(By.tagName("body"))).getText();
+                driver.get(String.format(TRANSLATE_PAGE, "en", body.split("#")[1]));
+                String eng = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
+                driver.get(String.format(TRANSLATE_PAGE, "ru", body.split("#")[1]));
+                String rus = wait.until(presenceOfElementLocated(By.xpath(TRANSLATION_RESULT_XPATH))).getText();
+                result.append(parseText(body, eng, rus));
+                log.info("Successfully parsed body.");
+            }
+            compareStatusesAndUpdate(user, result.toString());
         } catch (Exception e) {
             log.info("Application status not found.");
             compareStatusesAndUpdate(user, UNKNOWN_STATUS);
