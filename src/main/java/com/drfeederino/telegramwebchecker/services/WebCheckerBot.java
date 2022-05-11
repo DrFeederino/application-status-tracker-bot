@@ -62,12 +62,12 @@ public class WebCheckerBot extends TelegramLongPollingBot {
     @PostConstruct
     public void register() {
         try {
-            log.debug("Registering bot.");
+            log.info("Registering bot.");
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
             telegramBotsApi.registerBot(this);
-            log.debug("Successfully registered bot.");
+            log.info("Successfully registered bot.");
         } catch (TelegramApiException e) {
-            log.debug("Error occurred {}", e.getMessage());
+            log.info("Error occurred {}", e.getMessage());
             e.printStackTrace();
         }
     }
@@ -94,7 +94,7 @@ public class WebCheckerBot extends TelegramLongPollingBot {
 
     @SneakyThrows
     private void handleNewUser(Long userId) {
-        log.debug("Registering new user.");
+        log.info("Registering new user.");
         TelegramUser telegramUser = new TelegramUser(userId, UserStatus.REGISTERED, null, null, null);
         userRepository.save(telegramUser);
         sendUpdate(userId, WELCOME_MESSAGE);
@@ -108,14 +108,14 @@ public class WebCheckerBot extends TelegramLongPollingBot {
             return; // nothing to do
         }
         if (text.contains("/stop")) { // when user stops bot
-            log.debug("Deleting user.");
+            log.info("Deleting user.");
             userRepository.deleteById(user.getId());
             sendUpdate(user.getId(), USER_DELETED);
             return;
         }
 
         if (text.contains("/status")) { // when user stops bot
-            log.debug("Checking user's status.");
+            log.info("Checking user's status.");
             sendUpdate(user.getId(), USER_CHECKING_STATUS_NOW);
             TelegramUser telegramUser = trackingParser.updateUserStatus(user);
             sendNewStatus(telegramUser.getId(), telegramUser.getLastStatus());
@@ -135,7 +135,7 @@ public class WebCheckerBot extends TelegramLongPollingBot {
         }
 
         if (barcode != null && number != null) {
-            log.debug("Completed user registration. Retrieving latest status.");
+            log.info("Completed user registration. Retrieving latest status.");
             user.setStatus(UserStatus.COMPLETE);
             user.setBarcode(encryptData(barcode));
             user.setNumber(encryptData(number));
@@ -168,11 +168,11 @@ public class WebCheckerBot extends TelegramLongPollingBot {
 
     @Scheduled(fixedRate = 1000 * 60 * 60)
     private void scheduleUpdate() {
-        log.debug("Scheduled update. Retrieving information for users.");
+        log.info("Scheduled update. Retrieving information for users.");
         List<TelegramUser> updatedUsers = trackingParser.updateApplicationStatuses(userRepository.findAll());
         userRepository.saveAll(updatedUsers);
         updatedUsers.forEach(user -> sendNewStatus(user.getId(), user.getLastStatus()));
-        log.debug("Scheduled update complete. Updated statuses for " + updatedUsers.size() + " out of " + userRepository.findAll().size() + " users.");
+        log.info("Scheduled update complete. Updated statuses for " + updatedUsers.size() + " out of " + userRepository.findAll().size() + " users.");
     }
 
     @SneakyThrows

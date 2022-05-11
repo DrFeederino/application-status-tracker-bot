@@ -12,7 +12,6 @@ import java.security.spec.KeySpec;
 import java.util.Base64;
 
 public class AESEncryption {
-
     private static final String SECRET_KEY_ALGO = "PBKDF2WithHmacSHA256";
     private static final SecretKey SECRET_KEY;
 
