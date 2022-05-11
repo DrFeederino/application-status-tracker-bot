@@ -4,7 +4,6 @@ This bot is desigend to automatically track application status on the iData webs
 
 # Roadmap
 
-* Add ability to track multiple applications by the user;
 * Documenting code;
 * Refactoring & fixing bugs;
 * Add ability to automatically remove the application if the status is "done"?;
