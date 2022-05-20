@@ -1,12 +1,14 @@
 # iData Application Tracking Bot
 
-This bot is desigend to automatically track application status on the iData website.
+This bot is designed to automatically track application status on the iData website.
 
 # Roadmap
 
+* Add bots abilities: /news, /list, /remove & /about;
+* Validation of input & additional notifications to users if something is wrong;
+* Automatic deletion of user info if documents were shipped;
 * Documenting code;
 * Refactoring & fixing bugs;
-* Add ability to automatically remove the application if the status is "done"?;
 
 # Hows and whats:
 

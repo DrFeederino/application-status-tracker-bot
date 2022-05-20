@@ -4,7 +4,7 @@ import com.drfeederino.telegramwebchecker.entities.TelegramUser;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
-import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +35,7 @@ public class IDataTrackingParser extends TrackingParser {
 
     @Override
     public List<TelegramUser> updateApplicationStatuses(List<TelegramUser> users) {
-        FirefoxDriver driver = createHeadlessDriver();
+        RemoteWebDriver driver = createHeadlessDriver();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10L));
         ArrayList<TelegramUser> updatedUsers = new ArrayList<>();
         try {
@@ -45,7 +45,7 @@ public class IDataTrackingParser extends TrackingParser {
                         try {
                             String[] numbers = decryptData(data.getNumber()).split(";");
                             String[] barcodes = decryptData(data.getBarcode()).split(";");
-                            StringBuilder result = new StringBuilder("");
+                            StringBuilder result = new StringBuilder();
                             for (int i = 0; i < numbers.length; i++) {
                                 driver.get(String.format(STATUS_CHECK, numbers[i], barcodes[i]));
                                 String body = wait.until(presenceOfElementLocated(By.tagName("body"))).getText();
@@ -97,12 +97,12 @@ public class IDataTrackingParser extends TrackingParser {
 
     @Override
     public TelegramUser updateUserStatus(TelegramUser user) {
-        FirefoxDriver driver = createHeadlessDriver();
+        RemoteWebDriver driver = createHeadlessDriver();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10L));
         try {
             String[] numbers = decryptData(user.getNumber()).split(";");
             String[] barcodes = decryptData(user.getBarcode()).split(";");
-            StringBuilder result = new StringBuilder("");
+            StringBuilder result = new StringBuilder();
             for (int i = 0; i < numbers.length; i++) {
                 driver.get(String.format(STATUS_CHECK, numbers[i], barcodes[i]));
                 String body = wait.until(presenceOfElementLocated(By.tagName("body"))).getText();

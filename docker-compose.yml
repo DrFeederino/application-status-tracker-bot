@@ -1,0 +1,27 @@
+services:
+  selenium:
+    build:
+      context: docker/selenium
+    shm_size: '3gb'
+    ports:
+      - 4444:4444
+      - 5900:5900
+      - 7900:7900
+    networks:
+      - app-tracking-bot
+    depends_on:
+      - app-tracking-bot
+
+  app-tracking-bot:
+    build:
+      context: docker/app
+    volumes:
+      - ${PATH_TO_DB}:/app/appDb/:rw
+    networks:
+      - app-tracking-bot
+    env_file:
+      - .env
+
+networks:
+  app-tracking-bot:
+    driver: bridge
